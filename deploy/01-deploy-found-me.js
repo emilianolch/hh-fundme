@@ -10,8 +10,6 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
   const chainId = network.config.chainId;
   let priceFeedAddress;
 
-  console.log("Hello world!");
-
   if (developmentChains.includes(network.name)) {
     priceFeedAddress = (await deployments.get("MockV3Aggregator")).address;
   } else {

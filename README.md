@@ -1,6 +1,8 @@
-# Sample Hardhat Project
+# Hardhat Found Me
 
-I taked this code from FCC Smart contracts and Solidity course. It demonstrates a basic Hardhat use case. It comes with a sample contract, a test for that contract, and a script that deploys that contract.
+This code demonstrates a basic Hardhat use case. It comes with a sample contract, a test for that contract, and a script that deploys that contract.
+
+First, check this great [FCC course](https://www.youtube.com/watch?v=gyMwXuJrbJQ&t=36048s).
 
 Try running some of the following tasks:
 
