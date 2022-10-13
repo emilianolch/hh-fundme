@@ -7,13 +7,12 @@ const {
 module.exports = async ({ getNamedAccounts, deployments }) => {
   const { deploy, log } = deployments;
   const { deployer } = await getNamedAccounts();
-  const chainId = network.config.chainId;
   let priceFeedAddress;
 
   if (developmentChains.includes(network.name)) {
     priceFeedAddress = (await deployments.get("MockV3Aggregator")).address;
   } else {
-    priceFeedAddress = networkConfig[chainId].ethUsdPriceFeed;
+    priceFeedAddress = networkConfig[network.name].ethUsdPriceFeed;
   }
 
   const foundMe = await deploy("FoundMe", {
