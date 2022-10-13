@@ -3,24 +3,34 @@ pragma solidity ^0.8.0;
 
 import "./PriceConverter.sol";
 
+/** @title A contract for crowd founding
+ *  @author Emiliano López
+ */
 contract FoundMe {
     using PriceConverter for uint;
 
+    uint constant MIN_USD = 50 * 1e18;
     address immutable i_owner;
     address immutable i_priceFeed;
-
-    uint constant MIN_USD = 50 * 1e18;
     address[] public founders;
     mapping(address => uint) public addressToAmount;
+
+    modifier onlyOwner() {
+        require(msg.sender == i_owner, "Not owner");
+        _;
+    }
 
     constructor(address priceFeed) {
         i_owner = msg.sender;
         i_priceFeed = priceFeed;
     }
 
-    modifier onlyOwner() {
-        require(msg.sender == i_owner, "Not owner");
-        _;
+    receive() external payable {
+        found();
+    }
+
+    fallback() external payable {
+        found();
     }
 
     function found() public payable {
@@ -44,13 +54,5 @@ contract FoundMe {
             ""
         );
         require(sent, "Failed to send Ether");
-    }
-
-    receive() external payable {
-        found();
-    }
-
-    fallback() external payable {
-        found();
     }
 }
