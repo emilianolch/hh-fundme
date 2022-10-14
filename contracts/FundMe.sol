@@ -3,15 +3,15 @@ pragma solidity ^0.8.0;
 
 import "./PriceConverter.sol";
 
-/** @title A contract for crowd founding
+/** @title A contract for crowd funding
  *  @author Emiliano López
  */
-contract FoundMe {
+contract FundMe {
     using PriceConverter for uint;
 
     uint constant MIN_USD = 50 * 1e18;
     address immutable i_owner;
-    address immutable i_priceFeed;
+    address public immutable priceFeed;
     address[] public founders;
     mapping(address => uint) public addressToAmount;
 
@@ -20,22 +20,22 @@ contract FoundMe {
         _;
     }
 
-    constructor(address priceFeed) {
+    constructor(address _priceFeed) {
         i_owner = msg.sender;
-        i_priceFeed = priceFeed;
+        priceFeed = _priceFeed;
     }
 
     receive() external payable {
-        found();
+        fund();
     }
 
     fallback() external payable {
-        found();
+        fund();
     }
 
-    function found() public payable {
+    function fund() public payable {
         require(
-            msg.value.toUsd(i_priceFeed) >= MIN_USD,
+            msg.value.toUsd(priceFeed) >= MIN_USD,
             "Didn't send enough ETH"
         );
         founders.push(msg.sender);

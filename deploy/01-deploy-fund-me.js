@@ -18,7 +18,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
 
   const args = [priceFeedAddress];
 
-  const foundMe = await deploy("FoundMe", {
+  const fundMe = await deploy("FundMe", {
     from: deployer,
     args,
     log: true,
@@ -30,6 +30,6 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
     process.env["ETHERSCAN_API_KEY"]
   ) {
     // Verify with etherscan
-    await verify(foundMe.address, args);
+    await verify(fundMe.address, args);
   }
 };
