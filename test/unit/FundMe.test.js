@@ -16,7 +16,7 @@ describe("FundMe", async function () {
 
   describe("constructor", async function () {
     it("should set aggregator address correctly", async function () {
-      const response = await fundMe.priceFeed();
+      const response = await fundMe.i_priceFeed();
       assert.equal(response, mockV3Aggregator.address);
     });
   });
@@ -28,13 +28,13 @@ describe("FundMe", async function () {
 
     it("should update funds data structure", async function () {
       await fundMe.fund({ value: sendValue });
-      const response = await fundMe.addressToAmount(deployer);
+      const response = await fundMe.s_addressToAmount(deployer);
       assert.equal(response.toString(), sendValue);
     });
 
     it("should add funder to array of funders", async function () {
       await fundMe.fund({ value: sendValue });
-      const response = await fundMe.funders(0);
+      const response = await fundMe.s_funders(0);
       assert.equal(response, deployer);
     });
   });
@@ -99,13 +99,95 @@ describe("FundMe", async function () {
         startingDeployerBalance.add(startingFoundMeBalance).toString(),
         deployerBalance.add(gasCost).toString()
       );
-      expect(fundMe.funders(0)).to.be.reverted;
+
+      expect(fundMe.s_funders(0)).to.be.reverted;
+
+      for (let i = 1; i < 6; i++) {
+        assert.equal(await fundMe.s_addressToAmount(accounts[i].address), 0);
+      }
     });
 
-    it("attempt to withdraw by other than owner", async function () {
+    it("only allows the owner to withdraw", async function () {
       const accounts = await ethers.getSigners();
       const connectedFundMe = await fundMe.connect(accounts[1]);
-      expect(connectedFundMe.withdraw()).to.be.reverted;
+      expect(connectedFundMe.withdraw()).to.be.revertedWith("FundMe__NotOwner");
+    });
+  });
+
+  describe("cheapper withdraw", async function () {
+    beforeEach(async function () {
+      await fundMe.fund({ value: sendValue });
+    });
+
+    it("withdraw ETH from a sigle funder", async function () {
+      // Arrange
+      const startingFoundMeBalance = await fundMe.provider.getBalance(
+        fundMe.address
+      );
+      const startingDeployerBalance = await fundMe.provider.getBalance(
+        deployer
+      );
+
+      // Act
+      const txResponse = await fundMe.cheapperWithdraw();
+      const { gasUsed, effectiveGasPrice } = await txResponse.wait(1);
+      const gasCost = gasUsed.mul(effectiveGasPrice);
+
+      const fundMeBalance = await fundMe.provider.getBalance(fundMe.address);
+      const deployerBalance = await fundMe.provider.getBalance(deployer);
+
+      // Assert
+      assert.equal(fundMeBalance, 0);
+      assert.equal(
+        startingDeployerBalance.add(startingFoundMeBalance).toString(),
+        deployerBalance.add(gasCost).toString()
+      );
+    });
+
+    it("withdraw from multiple funders", async function () {
+      const accounts = await ethers.getSigners();
+
+      for (let i = 1; i < 6; i++) {
+        const connectedFundMe = fundMe.connect(accounts[i]);
+        await connectedFundMe.fund({ value: sendValue });
+      }
+
+      // Arrange
+      const startingFoundMeBalance = await fundMe.provider.getBalance(
+        fundMe.address
+      );
+      const startingDeployerBalance = await fundMe.provider.getBalance(
+        deployer
+      );
+
+      // Act
+      const txResponse = await fundMe.cheapperWithdraw();
+      const { gasUsed, effectiveGasPrice } = await txResponse.wait(1);
+      const gasCost = gasUsed.mul(effectiveGasPrice);
+
+      const fundMeBalance = await fundMe.provider.getBalance(fundMe.address);
+      const deployerBalance = await fundMe.provider.getBalance(deployer);
+
+      // Assert
+      assert.equal(fundMeBalance, 0);
+      assert.equal(
+        startingDeployerBalance.add(startingFoundMeBalance).toString(),
+        deployerBalance.add(gasCost).toString()
+      );
+
+      expect(fundMe.s_funders(0)).to.be.reverted;
+
+      for (let i = 1; i < 6; i++) {
+        assert.equal(await fundMe.s_addressToAmount(accounts[i].address), 0);
+      }
+    });
+
+    it("only allows the owner to withdraw", async function () {
+      const accounts = await ethers.getSigners();
+      const connectedFundMe = await fundMe.connect(accounts[1]);
+      expect(connectedFundMe.cheapperWithdraw()).to.be.revertedWith(
+        "FundMe__NotOwner"
+      );
     });
   });
 });

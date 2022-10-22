@@ -3,6 +3,8 @@ pragma solidity ^0.8.0;
 
 import "./PriceConverter.sol";
 
+error FundMe__NotOwner();
+
 /** @title A contract for crowd funding
  *  @author Emiliano López
  */
@@ -11,18 +13,18 @@ contract FundMe {
 
     uint constant MIN_USD = 50 * 1e18;
     address immutable i_owner;
-    address public immutable priceFeed;
-    address[] public funders;
-    mapping(address => uint) public addressToAmount;
+    address public immutable i_priceFeed;
+    address[] public s_funders;
+    mapping(address => uint) public s_addressToAmount;
 
     modifier onlyOwner() {
-        require(msg.sender == i_owner, "Not owner");
+        if (msg.sender != i_owner) revert FundMe__NotOwner();
         _;
     }
 
     constructor(address _priceFeed) {
         i_owner = msg.sender;
-        priceFeed = _priceFeed;
+        i_priceFeed = _priceFeed;
     }
 
     receive() external payable {
@@ -35,18 +37,18 @@ contract FundMe {
 
     function fund() public payable {
         require(
-            msg.value.toUsd(priceFeed) >= MIN_USD,
+            msg.value.toUsd(i_priceFeed) >= MIN_USD,
             "Didn't send enough ETH"
         );
-        funders.push(msg.sender);
-        addressToAmount[msg.sender] += msg.value;
+        s_funders.push(msg.sender);
+        s_addressToAmount[msg.sender] += msg.value;
     }
 
     function withdraw() public onlyOwner {
-        for (uint i = 0; i < funders.length; i++) {
-            addressToAmount[funders[i]] = 0;
+        for (uint i = 0; i < s_funders.length; i++) {
+            s_addressToAmount[s_funders[i]] = 0;
         }
-        funders = new address[](0);
+        s_funders = new address[](0);
 
         // Call returns a boolean value indicating success or failure.
         // This is the current recommended method to use.
@@ -54,5 +56,15 @@ contract FundMe {
             ""
         );
         require(sent, "Failed to send Ether");
+    }
+
+    function cheapperWithdraw() public onlyOwner {
+        address[] memory funders = s_funders;
+        for (uint i = 0; i < funders.length; i++) {
+            s_addressToAmount[funders[i]] = 0;
+        }
+        s_funders = new address[](0);
+        (bool success, ) = i_owner.call{value: address(this).balance}("");
+        require(success);
     }
 }
