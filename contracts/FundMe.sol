@@ -4,6 +4,7 @@ pragma solidity ^0.8.0;
 import "./PriceConverter.sol";
 
 error FundMe__NotOwner();
+error FundMe__InsufficientAmount();
 
 /** @title A contract for crowd funding
  *  @author Emiliano López
@@ -12,10 +13,10 @@ contract FundMe {
     using PriceConverter for uint;
 
     uint constant MIN_USD = 50 * 1e18;
-    address immutable i_owner;
-    address public immutable i_priceFeed;
-    address[] public s_funders;
-    mapping(address => uint) public s_addressToAmount;
+    address private immutable i_owner;
+    address private immutable i_priceFeed;
+    address[] private s_funders;
+    mapping(address => uint) private s_addressToAmount;
 
     modifier onlyOwner() {
         if (msg.sender != i_owner) revert FundMe__NotOwner();
@@ -36,29 +37,14 @@ contract FundMe {
     }
 
     function fund() public payable {
-        require(
-            msg.value.toUsd(i_priceFeed) >= MIN_USD,
-            "Didn't send enough ETH"
-        );
+        if (msg.value.toUsd(i_priceFeed) < MIN_USD) {
+            revert FundMe__InsufficientAmount();
+        }
         s_funders.push(msg.sender);
         s_addressToAmount[msg.sender] += msg.value;
     }
 
     function withdraw() public onlyOwner {
-        for (uint i = 0; i < s_funders.length; i++) {
-            s_addressToAmount[s_funders[i]] = 0;
-        }
-        s_funders = new address[](0);
-
-        // Call returns a boolean value indicating success or failure.
-        // This is the current recommended method to use.
-        (bool sent, ) = payable(msg.sender).call{value: address(this).balance}(
-            ""
-        );
-        require(sent, "Failed to send Ether");
-    }
-
-    function cheapperWithdraw() public onlyOwner {
         address[] memory funders = s_funders;
         for (uint i = 0; i < funders.length; i++) {
             s_addressToAmount[funders[i]] = 0;
@@ -66,5 +52,21 @@ contract FundMe {
         s_funders = new address[](0);
         (bool success, ) = i_owner.call{value: address(this).balance}("");
         require(success);
+    }
+
+    function getOwner() public view returns (address) {
+        return i_owner;
+    }
+
+    function getPriceFeed() public view returns (address) {
+        return i_priceFeed;
+    }
+
+    function getFunder(uint index) public view returns (address) {
+        return s_funders[index];
+    }
+
+    function getFunderAmount(address funder) public view returns (uint) {
+        return s_addressToAmount[funder];
     }
 }
