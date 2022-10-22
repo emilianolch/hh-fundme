@@ -28,9 +28,84 @@ describe("FundMe", async function () {
 
     it("should update funds data structure", async function () {
       await fundMe.fund({ value: sendValue });
-      console.log(deployer);
       const response = await fundMe.addressToAmount(deployer);
       assert.equal(response.toString(), sendValue);
+    });
+
+    it("should add funder to array of funders", async function () {
+      await fundMe.fund({ value: sendValue });
+      const response = await fundMe.funders(0);
+      assert.equal(response, deployer);
+    });
+  });
+
+  describe("withdraw", async function () {
+    beforeEach(async function () {
+      await fundMe.fund({ value: sendValue });
+    });
+
+    it("withdraw ETH from a sigle funder", async function () {
+      // Arrange
+      const startingFoundMeBalance = await fundMe.provider.getBalance(
+        fundMe.address
+      );
+      const startingDeployerBalance = await fundMe.provider.getBalance(
+        deployer
+      );
+
+      // Act
+      const txResponse = await fundMe.withdraw();
+      const { gasUsed, effectiveGasPrice } = await txResponse.wait(1);
+      const gasCost = gasUsed.mul(effectiveGasPrice);
+
+      const fundMeBalance = await fundMe.provider.getBalance(fundMe.address);
+      const deployerBalance = await fundMe.provider.getBalance(deployer);
+
+      // Assert
+      assert.equal(fundMeBalance, 0);
+      assert.equal(
+        startingDeployerBalance.add(startingFoundMeBalance).toString(),
+        deployerBalance.add(gasCost).toString()
+      );
+    });
+
+    it("withdraw from multiple funders", async function () {
+      const accounts = await ethers.getSigners();
+
+      for (let i = 1; i < 6; i++) {
+        const connectedFundMe = fundMe.connect(accounts[i]);
+        await connectedFundMe.fund({ value: sendValue });
+      }
+
+      // Arrange
+      const startingFoundMeBalance = await fundMe.provider.getBalance(
+        fundMe.address
+      );
+      const startingDeployerBalance = await fundMe.provider.getBalance(
+        deployer
+      );
+
+      // Act
+      const txResponse = await fundMe.withdraw();
+      const { gasUsed, effectiveGasPrice } = await txResponse.wait(1);
+      const gasCost = gasUsed.mul(effectiveGasPrice);
+
+      const fundMeBalance = await fundMe.provider.getBalance(fundMe.address);
+      const deployerBalance = await fundMe.provider.getBalance(deployer);
+
+      // Assert
+      assert.equal(fundMeBalance, 0);
+      assert.equal(
+        startingDeployerBalance.add(startingFoundMeBalance).toString(),
+        deployerBalance.add(gasCost).toString()
+      );
+      expect(fundMe.funders(0)).to.be.reverted;
+    });
+
+    it("attempt to withdraw by other than owner", async function () {
+      const accounts = await ethers.getSigners();
+      const connectedFundMe = await fundMe.connect(accounts[1]);
+      expect(connectedFundMe.withdraw()).to.be.reverted;
     });
   });
 });

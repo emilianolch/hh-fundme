@@ -12,7 +12,7 @@ contract FundMe {
     uint constant MIN_USD = 50 * 1e18;
     address immutable i_owner;
     address public immutable priceFeed;
-    address[] public founders;
+    address[] public funders;
     mapping(address => uint) public addressToAmount;
 
     modifier onlyOwner() {
@@ -38,15 +38,15 @@ contract FundMe {
             msg.value.toUsd(priceFeed) >= MIN_USD,
             "Didn't send enough ETH"
         );
-        founders.push(msg.sender);
+        funders.push(msg.sender);
         addressToAmount[msg.sender] += msg.value;
     }
 
     function withdraw() public onlyOwner {
-        for (uint i = 0; i < founders.length; i++) {
-            addressToAmount[founders[i]] = 0;
+        for (uint i = 0; i < funders.length; i++) {
+            addressToAmount[funders[i]] = 0;
         }
-        founders = new address[](0);
+        funders = new address[](0);
 
         // Call returns a boolean value indicating success or failure.
         // This is the current recommended method to use.
